@@ -1,0 +1,74 @@
+#!/usr/bin/env node
+import { parseArgs } from 'node:util';
+import { carregarCliente } from '../src/config.mjs';
+import { criarFirecrawl } from '../src/firecrawl.mjs';
+import { executarSetup } from '../src/setup.mjs';
+import { criarTelegram } from '../src/deliver/telegram.mjs';
+import { criarEstado } from '../src/state.mjs';
+import { run, escutar, ver, enviarEmailDoDia } from '../src/comandos.mjs';
+
+const AJUDA = `radar <comando> --cliente <pasta>
+
+  setup                 mostra os monitores e a estimativa de créditos (simulação)
+  setup --confirmar     cria ou altera os monitores no Firecrawl
+  run [--dry-run]       recolhe as novidades e envia a pergunta da manhã
+  escutar [--dry-run]   lê as respostas (VER, EMAIL, número) no bot dedicado
+  ver [N] [--data D]    mostra os detalhes do último dia (ou do dia D)
+  email [destino]       envia o email do último dia (--dry-run grava só a prévia)
+
+Opções: --aceito-custo (setup acima do orçamento), --data AAAA-MM-DD`;
+
+const { values: o, positionals } = parseArgs({
+  allowPositionals: true,
+  options: {
+    cliente: { type: 'string' },
+    confirmar: { type: 'boolean', default: false },
+    'aceito-custo': { type: 'boolean', default: false },
+    'dry-run': { type: 'boolean', default: false },
+    data: { type: 'string' },
+    ajuda: { type: 'boolean', short: 'h', default: false },
+  },
+});
+
+const [comando, arg] = positionals;
+if (o.ajuda || !comando) { console.log(AJUDA); process.exit(0); }
+if (!o.cliente) { console.error('Falta --cliente <pasta>.\n\n' + AJUDA); process.exit(1); }
+
+const log = (...a) => console.log(...a);
+const cliente = carregarCliente(o.cliente);
+const firecrawl = (somenteLeitura) => criarFirecrawl({ chave: cliente.env.FIRECRAWL_API_KEY, somenteLeitura, log });
+
+try {
+  switch (comando) {
+    case 'setup': {
+      const api = cliente.env.FIRECRAWL_API_KEY ? firecrawl(!o.confirmar) : null;
+      if (o.confirmar && !api) throw new Error('Falta FIRECRAWL_API_KEY no .env do cliente.');
+      await executarSetup(cliente, { api, confirmar: o.confirmar, aceitoCusto: o['aceito-custo'], log });
+      break;
+    }
+    case 'run': {
+      const tg = cliente.env.TELEGRAM_BOT_TOKEN ? criarTelegram({ token: cliente.env.TELEGRAM_BOT_TOKEN }) : null;
+      await run(cliente, { api: firecrawl(true), tg, dryRun: o['dry-run'], log });
+      break;
+    }
+    case 'escutar':
+      await escutar(cliente, { tg: criarTelegram({ token: cliente.env.TELEGRAM_BOT_TOKEN }), dryRun: o['dry-run'], log });
+      break;
+    case 'ver':
+      console.log(ver(cliente, { data: o.data, n: arg }));
+      break;
+    case 'email': {
+      const estado = criarEstado(cliente.dir);
+      const dia = o.data ? estado.lerDia(o.data) : estado.ultimoDia();
+      if (!dia) throw new Error('Não há nenhum dia guardado.');
+      await enviarEmailDoDia(cliente, dia, { destino: arg, dryRun: o['dry-run'], log });
+      break;
+    }
+    default:
+      console.error(`Comando desconhecido "${comando}".\n\n${AJUDA}`);
+      process.exit(1);
+  }
+} catch (e) {
+  console.error(`Erro: ${e.message}`);
+  process.exit(1);
+}

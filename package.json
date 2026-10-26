@@ -1,0 +1,12 @@
+{
+  "name": "radar-super-power",
+  "version": "0.1.0",
+  "description": "Radar de concorrentes e de mercado para pequenos negócios, com Firecrawl e sem API de IA na recolha.",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "bin": { "radar": "bin/radar" },
+  "engines": { "node": ">=20" },
+  "scripts": { "test": "node --test" },
+  "dependencies": { "yaml": "^2.9.1" }
+}

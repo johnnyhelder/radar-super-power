@@ -1,0 +1,52 @@
+# Config de um negócio. Copie para <pasta-do-cliente>/radar.config.yaml.
+# Sem segredos aqui: chaves, chat_id e emails vão no .env da mesma pasta.
+# Este modelo dá ~410 créditos/mês, folgado dentro dos 1.000 grátis do Firecrawl.
+
+negocio: Padaria Exemplo
+nome_dono: Ana                 # aparece no "Bom dia, Ana!"
+pais: Portugal                 # entra no goal do juiz ("considerar só resultados de Portugal")
+# regiao: Porto e Gaia         # opcional, substitui o país no goal (bom para negócio local)
+lingua: pt-PT                  # pt-PT, pt-BR ou es, a língua de quem LÊ o radar
+# fuso: Europe/Lisbon          # opcional, deduzido do país
+excluir_dominios: [".br"]      # ".br" tira o país inteiro; "site.pt" tira um site
+hora_pergunta: "09:30"         # hora local da pergunta; os monitores correm 3 h antes
+orcamento_creditos: 1000       # o setup recusa passar disto sem --aceito-custo
+
+concorrentes:
+  frequencia: 3x semana        # diario, semanal ou Nx semana
+  objetivo: Alertar sobre novos produtos, mudanças de preço e promoções.
+  urls:
+    - https://concorrente-a.pt
+    - https://concorrente-b.pt/loja
+    - https://concorrente-c.pt
+    - https://concorrente-d.pt
+    - https://concorrente-e.pt
+
+pesquisas:
+  - secao: Feiras com inscrições abertas
+    frequencia: semanal
+    max_resultados: 10
+    queries:
+      - feira de natal inscrições expositores
+      - mercado de natal artesãos inscrições
+    objetivo: Alertar quando abrirem inscrições para expositores, com prazo e local.
+
+  - secao: Menções à marca
+    frequencia: semanal
+    max_resultados: 10
+    queries: ['"Padaria Exemplo"', '"Padaria Exemplo" avaliações']
+    objetivo: Alertar quando alguém falar da Padaria Exemplo (notícias, avaliações, blogs).
+    excluir: [padariaexemplo.pt]
+
+  # Concorrente sem site (só Instagram): pesquisa com o nome e a cidade.
+  - secao: Concorrentes na web
+    frequencia: semanal
+    max_resultados: 5
+    queries: ['"Padaria do Largo" Braga']
+    objetivo: Alertar sobre novidades da Padaria do Largo (eventos, produtos novos, preços, notícias). Ignorar negócios com o mesmo nome noutras regiões.
+
+  - secao: Imprensa e tendências
+    frequencia: semanal
+    max_resultados: 10
+    queries: [padarias artesanais tendências, pão de fermentação natural notícias]
+    objetivo: Alertar sobre notícias e listas que um dono de padaria deva conhecer.
